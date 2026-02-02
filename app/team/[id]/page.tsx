@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 interface Member {
   id: string
@@ -151,12 +152,12 @@ function TeamDashboard({ teamId }: { teamId: string }) {
                 Fair spin wheel - no repeat winners for 7 days
               </p>
             </div>
-            <a
+            <Link
               href="/"
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Back to Teams
-            </a>
+            </Link>
           </div>
         </header>
 
@@ -188,7 +189,7 @@ function TeamDashboard({ teamId }: { teamId: string }) {
                 disabled={spinning || members.length === 0}
                 className="w-full px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                {spinning ? 'Spinning...' : '🎲 Spin the Wheel!'}
+                {spinning ? 'Spinning...' : '🎲 Spin Wheel!'}
               </button>
 
               {!winner && members.length > 0 && !spinning && (
