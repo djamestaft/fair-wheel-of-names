@@ -1,8 +1,7 @@
 import { client } from './sanity'
-import type { Member, Team } from '@/sanity/schemas'
 
 export interface MemberWithWeight {
-  member: Member
+  member: any
   daysSinceLastWin: number
   weight: number
 }
@@ -29,7 +28,12 @@ function getDaysSinceLastWin(lastWinDate: string | null): number {
  */
 export async function selectFairWinner(
   teamId: string
-): Promise<Member | null> {
+): Promise<any | null> {
+  if (!client) {
+    console.error('Sanity client not configured')
+    return null
+  }
+
   // Fetch team with all members
   const team = await client.fetch(
     `*[_type == "team" && _id == $teamId][0]{
@@ -90,7 +94,12 @@ export async function selectFairWinner(
  */
 export async function recordWinner(
   memberId: string
-): Promise<Member | null> {
+): Promise<any | null> {
+  if (!client) {
+    console.error('Sanity client not configured')
+    return null
+  }
+
   const member = await client.fetch(
     `*[_type == "member" && _id == $memberId][0]`,
     { memberId }
@@ -115,6 +124,11 @@ export async function recordWinner(
  * Get team with members for display
  */
 export async function getTeamWithMembers(teamId: string) {
+  if (!client) {
+    console.error('Sanity client not configured')
+    return null
+  }
+
   return client.fetch(
     `*[_type == "team" && _id == $teamId][0]{
       _id,
@@ -137,6 +151,11 @@ export async function getTeamWithMembers(teamId: string) {
  * Get all teams for list page
  */
 export async function getAllTeams() {
+  if (!client) {
+    console.error('Sanity client not configured')
+    return []
+  }
+
   return client.fetch(
     `*[_type == "team"] | order(name asc){
       _id,

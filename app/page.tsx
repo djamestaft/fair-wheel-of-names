@@ -3,7 +3,13 @@ import { getAllTeams } from '@/lib/fair-selection'
 import type { Team } from '@/types/sanity'
 
 export default async function HomePage() {
-  const teams = await getAllTeams()
+  let teams: Team[] = []
+
+  try {
+    teams = await getAllTeams()
+  } catch (error) {
+    console.error('Failed to fetch teams:', error)
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
@@ -27,7 +33,7 @@ export default async function HomePage() {
             Choose Your Team
           </h2>
           <p className="text-xl text-gray-600">
-            Pick a team to spin the wheel and fairly select a winner
+            Pick a team to spin wheel and fairly select a winner
           </p>
         </div>
 

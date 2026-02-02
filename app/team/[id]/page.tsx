@@ -1,9 +1,13 @@
 import { getTeamWithMembers } from '@/lib/fair-selection'
-import type { Team } from '@/types/sanity'
-import TeamDashboard from './TeamDashboard'
 
 export default async function TeamPage({ params }: { params: { id: string } }) {
-  const team = await getTeamWithMembers(params.id)
+  let team = null
+
+  try {
+    team = await getTeamWithMembers(params.id)
+  } catch (error) {
+    console.error('Failed to fetch team:', error)
+  }
 
   if (!team) {
     return (
@@ -22,3 +26,5 @@ export default async function TeamPage({ params }: { params: { id: string } }) {
 
   return <TeamDashboard team={team} />
 }
+
+import TeamDashboard from './TeamDashboard'
