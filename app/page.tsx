@@ -1,4 +1,6 @@
-import Link from 'next/link'
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
 import { getAllTeams } from '@/lib/fair-selection'
 
 export default async function HomePage() {
@@ -92,8 +94,8 @@ function DemoTeamCard() {
         Quick demo with mock names - no setup required
       </p>
       <div className="flex items-center text-sm">
-        <span className="mr-4">✨ Add names instantly</span>
-        <span className="font-medium">Spin wheel →</span>
+        <span className="mr-4">✨ Real spinning wheel</span>
+        <span className="font-medium">Try it →</span>
       </div>
     </Link>
   )

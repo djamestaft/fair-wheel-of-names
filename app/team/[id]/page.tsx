@@ -6,6 +6,7 @@ interface Member {
   id: string
   name: string
   wins: number
+  lastWinDate?: Date
 }
 
 export default function TeamPage({ params }: { params: { id: string } }) {
@@ -13,23 +14,23 @@ export default function TeamPage({ params }: { params: { id: string } }) {
 }
 
 function TeamDashboard({ teamId }: { teamId: string }) {
-  // Mock names for demo team
   const [members, setMembers] = useState<Member[]>(
     teamId === 'demo'
       ? [
-          { id: '1', name: 'Alice Johnson', wins: 2 },
-          { id: '2', name: 'Bob Smith', wins: 5 },
-          { id: '3', name: 'Charlie Davis', wins: 3 },
-          { id: '4', name: 'Diana Prince', wins: 1 },
-          { id: '5', name: 'Eve Williams', wins: 4 },
-          { id: '6', name: 'Frank Miller', wins: 2 },
-          { id: '7', name: 'Grace Lee', wins: 0 },
-          { id: '8', name: 'Henry Chen', wins: 3 },
+          { id: '1', name: 'Alice', wins: 2 },
+          { id: '2', name: 'Bob', wins: 5 },
+          { id: '3', name: 'Charlie', wins: 3 },
+          { id: '4', name: 'Diana', wins: 1 },
+          { id: '5', name: 'Eve', wins: 4 },
+          { id: '6', name: 'Frank', wins: 2 },
+          { id: '7', name: 'Grace', wins: 0 },
+          { id: '8', name: 'Henry', wins: 3 },
         ]
       : []
   )
   const [newMemberName, setNewMemberName] = useState('')
   const [spinning, setSpinning] = useState(false)
+  const [rotation, setRotation] = useState(0)
   const [winner, setWinner] = useState<Member | null>(null)
 
   function addMember() {
@@ -52,13 +53,12 @@ function TeamDashboard({ teamId }: { teamId: string }) {
   function selectFairWinner() {
     if (members.length === 0) {
       alert('Add some team members first!')
-      return
+      return null
     }
 
     const now = new Date()
     const minGapDays = 7
 
-    // Calculate weights and filter eligible members
     const candidates = members
       .map((member) => {
         const daysSinceLastWin = member.lastWinDate
@@ -79,10 +79,9 @@ function TeamDashboard({ teamId }: { teamId: string }) {
 
     if (candidates.length === 0) {
       alert('No eligible team members - everyone won recently!')
-      return
+      return null
     }
 
-    // Weighted random selection
     const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0)
     let random = Math.random() * totalWeight
 
@@ -99,32 +98,49 @@ function TeamDashboard({ teamId }: { teamId: string }) {
   }
 
   async function handleSpin() {
+    const selected = selectFairWinner()
+    if (!selected) return
+
     setSpinning(true)
     setWinner(null)
 
-    // Simulate spin animation (3 seconds)
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    const segmentAngle = 360 / members.length
+    const memberIndex = members.findIndex((m) => m.id === selected.id)
+    const targetAngle = memberIndex * segmentAngle
+    const spins = 5 + Math.random() * 2
+    const totalRotation = spins * 360 + targetAngle
 
-    const selected = selectFairWinner()
+    const duration = 4000
+    const startTime = Date.now()
+    const startRotation = rotation
 
-    if (selected) {
-      // Update winner with new date and win count
-      const updatedMembers = members.map((m) =>
-        m.id === selected.id
-          ? { ...m, lastWinDate: new Date(), wins: m.wins + 1 }
-          : m
-      )
-      setMembers(updatedMembers)
-      setWinner(selected)
+    function animate() {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      const easeOut = 1 - Math.pow(1 - progress, 4)
+      setRotation(startRotation + (totalRotation * easeOut))
+
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        setSpinning(false)
+        setWinner(selected)
+
+        const updatedMembers = members.map((m) =>
+          m.id === selected.id
+            ? { ...m, lastWinDate: new Date(), wins: m.wins + 1 }
+            : m
+        )
+        setMembers(updatedMembers)
+      }
     }
 
-    setSpinning(false)
+    requestAnimationFrame(animate)
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
         <header className="bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-6 mb-8">
           <div className="flex justify-between items-center">
             <div>
@@ -144,44 +160,44 @@ function TeamDashboard({ teamId }: { teamId: string }) {
           </div>
         </header>
 
-        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Spin Area */}
           <div className="lg:col-span-2">
             <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-xl p-8 text-center">
-              <div className={`mb-8 relative ${spinning ? 'animate-pulse' : ''}`}>
-                {/* Visual Wheel */}
-                <div className="w-80 h-80 mx-auto rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 shadow-2xl flex items-center justify-center border-8 border-white">
-                  {spinning ? (
-                    <span className="text-6xl">🎡</span>
-                  ) : winner ? (
-                    <div className="text-center">
-                      <p className="text-4xl font-bold text-white mb-2">
-                        {winner.name}
-                      </p>
-                      <p className="text-xl text-white/80">🎉 Winner!</p>
-                    </div>
-                  ) : (
-                    <span className="text-6xl">🎯</span>
-                  )}
+              <div className="relative mb-8">
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 z-10">
+                  <div className="w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-black border-t-[40px] border-t-transparent transform rotate-180"></div>
+                </div>
+
+                <div
+                  className="relative w-80 h-80 mx-auto rounded-full shadow-2xl overflow-hidden"
+                  style={{
+                    transform: `rotate(${rotation}deg)`,
+                    transition: spinning ? 'none' : 'transform 0.3s ease-out',
+                  }}
+                >
+                  <SpinningWheel members={members} />
+                </div>
+
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-white shadow-lg flex items-center justify-center">
+                  <span className="text-4xl">🎯</span>
                 </div>
               </div>
 
               <button
                 onClick={handleSpin}
-                disabled={spinning}
-                className="px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                disabled={spinning || members.length === 0}
+                className="w-full px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                {spinning ? 'Spinning...' : '🎲 Spin the Wheel'}
+                {spinning ? 'Spinning...' : '🎲 Spin the Wheel!'}
               </button>
 
-              {!winner && (
+              {!winner && members.length > 0 && !spinning && (
                 <p className="mt-4 text-gray-600 text-sm">
-                  Fair selection: Minimum 7 days between wins
+                  Fair selection: Each segment = {Math.round(360 / members.length)}°
                 </p>
               )}
 
-              {winner && (
+              {winner && !spinning && (
                 <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-green-800 font-medium">
                     🎊 Congratulations to {winner.name}!
@@ -194,13 +210,11 @@ function TeamDashboard({ teamId }: { teamId: string }) {
             </div>
           </div>
 
-          {/* Right: Members List */}
           <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-xl p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               Team Members ({members.length})
             </h2>
 
-            {/* Add Member Form */}
             <div className="mb-4">
               <div className="flex gap-2">
                 <input
@@ -220,7 +234,6 @@ function TeamDashboard({ teamId }: { teamId: string }) {
               </div>
             </div>
 
-            {/* Members List */}
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {members.map((member) => (
                 <MemberCard
@@ -240,6 +253,68 @@ function TeamDashboard({ teamId }: { teamId: string }) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function SpinningWheel({ members }: { members: Member[] }) {
+  if (members.length === 0) {
+    return (
+      <div className="w-80 h-80 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+        <span className="text-gray-500 text-lg">Add members first</span>
+      </div>
+    )
+  }
+
+  const colors = [
+    '#8B5CF6', '#F472B6', '#3B82F6', '#EF4444',
+    '#F59E0B', '#10B981', '#EC4899', '#6366F1',
+    '#8B5CF6', '#F472B6', '#3B82F6', '#EF4444',
+  ]
+
+  const segmentAngle = 360 / members.length
+  const radius = 50
+
+  return (
+    <div className="absolute inset-0">
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        {members.map((member, index) => {
+          const angle = index * segmentAngle
+          const color = colors[index % colors.length]
+          const startAngleRad = (angle - 90) * (Math.PI / 180)
+          const endAngleRad = (angle + segmentAngle - 90) * (Math.PI / 180)
+          const x1 = 50 + radius * Math.cos(startAngleRad)
+          const y1 = 50 + radius * Math.sin(startAngleRad)
+          const x2 = 50 + radius * Math.cos(endAngleRad)
+          const y2 = 50 + radius * Math.sin(endAngleRad)
+          const largeArcFlag = segmentAngle > 180 ? 1 : 0
+
+          const midAngleRad = startAngleRad + (endAngleRad - startAngleRad) / 2
+          const textX = 50 + (radius / 2) * Math.cos(midAngleRad)
+          const textY = 50 + (radius / 2) * Math.sin(midAngleRad)
+          const textRotation = angle + segmentAngle / 2
+
+          const pathData = `M 50 50 L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius.toFixed(2)} ${radius.toFixed(2)} 0 ${largeArcFlag} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`
+
+          return (
+            <g key={member.id}>
+              <path d={pathData} fill={color} stroke="white" strokeWidth="2" />
+              <text
+                x={textX.toFixed(2)}
+                y={textY.toFixed(2)}
+                fill="white"
+                fontSize="10"
+                fontWeight="bold"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                transform={`rotate(${textRotation} ${textX.toFixed(2)} ${textY.toFixed(2)})`}
+              >
+                {member.name.length > 8 ? member.name.slice(0, 7) + '..' : member.name}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
     </div>
   )
 }
