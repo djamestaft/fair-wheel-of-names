@@ -107,7 +107,8 @@ function TeamDashboard({ teamId }: { teamId: string }) {
 
     const segmentAngle = 360 / members.length
     const memberIndex = members.findIndex((m) => m.id === selected.id)
-    const targetAngle = memberIndex * segmentAngle
+    // Add half segment to land in CENTER of segment, not the edge
+    const targetAngle = memberIndex * segmentAngle + segmentAngle / 2
     const spins = 5 + Math.random() * 2
     const totalRotation = spins * 360 + targetAngle
 
