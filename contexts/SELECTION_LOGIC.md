@@ -179,3 +179,48 @@ Teams can configure:
 - **minimumGapDays**: Days before a winner can be selected again (default: 7)
 
 This is set per-team in Sanity CMS.
+
+---
+
+## 7. SVG Rendering Details
+
+The wheel is rendered using SVG with these key details:
+
+### Coordinate System
+- SVG viewBox: `0 0 100 100` with center at `(50, 50)`
+- In SVG: 0° points right, 90° points down, -90° (or 270°) points up
+
+### Segment Drawing
+```typescript
+const startAngleRad = (memberIndex * segmentAngle - 90) * (Math.PI / 180)
+const endAngleRad = (memberIndex * segmentAngle + segmentAngle - 90) * (Math.PI / 180)
+```
+
+The `-90` offset converts from "clockwise from top" to SVG's standard angle system.
+
+### Visual Positions (4 members example)
+| Member | SVG Start | SVG End | Visual Position |
+|--------|-----------|---------|-----------------|
+| 0 | -90° (top) | 0° (right) | Upper-right quadrant |
+| 1 | 0° (right) | 90° (down) | Lower-right quadrant |
+| 2 | 90° (down) | 180° (left) | Lower-left quadrant |
+| 3 | 180° (left) | 270° (up) | Upper-left quadrant |
+
+---
+
+## 8. Debugging
+
+Console logs are emitted during each spin:
+```
+=== SPIN DEBUG ===
+Winner: Alice | Index: 0
+Segment center: 45 ° from top
+Target rotation mod 360: 315 °
+Verify: (center + target) % 360 = 0 (should be 0)
+Final rotation: 2115 | mod 360: 315 (should match target: 315)
+```
+
+If the visual landing doesn't match the announced winner, check:
+1. Member index matches between selection and rendering
+2. Final rotation mod 360 equals target rotation mod 360
+3. Verify calculation: (center + finalRotation) % 360 should equal 0
