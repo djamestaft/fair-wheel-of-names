@@ -28,6 +28,12 @@ export default defineType({
       description: 'A person cannot win again for this many days after their last win',
     }),
     defineField({
+      name: 'currentPrize',
+      title: 'Current prize',
+      type: 'string',
+      description: 'What the winner gets (e.g., "Coffee voucher", "Extra break time")',
+    }),
+    defineField({
       name: 'musicEnabled',
       title: 'Play music during spin',
       type: 'boolean',
@@ -70,6 +76,15 @@ export default defineType({
       title: 'Background video',
       type: 'file',
       hidden: ({ parent }) => parent?.backgroundType !== 'video',
+    }),
+    defineField({
+      name: 'wheelCenterImage',
+      title: 'Wheel center image',
+      type: 'image',
+      description: 'Image to display in the center of the spin wheel (optional)',
+      options: {
+        hotspot: true,
+      },
     }),
   ],
   preview: {

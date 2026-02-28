@@ -25,6 +25,7 @@ function getDaysSinceLastWin(lastWinDate: string | null): number {
  * - Exclude anyone who won in the last X days
  * - Weight remaining candidates by days since last win
  * - Pick weighted random from eligible pool
+ * - Fairness rule: if yesterday's winner is selected, defer to another eligible member
  */
 export async function selectFairWinner(
   teamId: string
@@ -78,15 +79,27 @@ export async function selectFairWinner(
   const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0)
   let random = Math.random() * totalWeight
 
+  let selected = candidates[0]
   for (const candidate of candidates) {
     random -= candidate.weight
     if (random <= 0) {
-      return candidate.member
+      selected = candidate
+      break
     }
   }
 
-  // Fallback (shouldn't happen)
-  return candidates[0].member
+  // Fairness rule: if yesterday's winner is selected, defer to another eligible member
+  if (selected.daysSinceLastWin <= 1 && candidates.length > 1) {
+    const otherEligible = candidates.filter(c => c.member._id !== selected.member._id)
+    if (otherEligible.length > 0) {
+      // Pick a random other eligible member
+      const fallback = otherEligible[Math.floor(Math.random() * otherEligible.length)]
+      console.log(`Fairness rule: ${selected.member.name} won yesterday, deferring to ${fallback.member.name}`)
+      return fallback.member
+    }
+  }
+
+  return selected.member
 }
 
 /**
