@@ -60,6 +60,12 @@ function TeamDashboard({ teamId }: { teamId: string }) {
   const [showWinnerModal, setShowWinnerModal] = useState(false)
   const [respinning, setRespinning] = useState(false)
   const [respinMessage, setRespinMessage] = useState('')
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [newMemberName, setNewMemberName] = useState('')
+  const [addingMember, setAddingMember] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null)
+  const [deletingMember, setDeletingMember] = useState(false)
 
   const fetchTeam = useCallback(async () => {
     if (!client) {
@@ -223,6 +229,77 @@ function TeamDashboard({ teamId }: { teamId: string }) {
       alert('Failed to reset stats')
     } finally {
       setResetting(false)
+    }
+  }
+
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newMemberName.trim() || addingMember) return
+
+    setAddingMember(true)
+    try {
+      const res = await fetch('/api/add-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newMemberName.trim(), teamId }),
+      })
+
+      if (!res.ok) throw new Error('Failed to add member')
+
+      const data = await res.json()
+
+      // Add the new member to local state
+      const newMember: Member = {
+        _id: data.member._id,
+        name: data.member.name,
+        totalWins: 0,
+        lastWinDate: undefined,
+      }
+      setMembers(prev => [...prev, newMember])
+      setNewMemberName('')
+      setShowAddMember(false)
+    } catch (err) {
+      console.error('Failed to add member:', err)
+      alert('Failed to add member')
+    } finally {
+      setAddingMember(false)
+    }
+  }
+
+  function confirmDeleteMember(member: Member) {
+    setMemberToDelete(member)
+    setShowDeleteConfirm(true)
+  }
+
+  async function handleDeleteMember() {
+    if (!memberToDelete || deletingMember) return
+
+    setDeletingMember(true)
+    try {
+      const res = await fetch('/api/delete-member', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: memberToDelete._id, teamId }),
+      })
+
+      if (!res.ok) throw new Error('Failed to delete member')
+
+      // Remove from local state
+      setMembers(prev => prev.filter(m => m._id !== memberToDelete._id))
+      setParticipants(prev => prev.filter(p => p._id !== memberToDelete._id))
+
+      // Clear winner if they were deleted
+      if (winner?._id === memberToDelete._id) {
+        setWinner(null)
+      }
+
+      setShowDeleteConfirm(false)
+      setMemberToDelete(null)
+    } catch (err) {
+      console.error('Failed to delete member:', err)
+      alert('Failed to delete member')
+    } finally {
+      setDeletingMember(false)
     }
   }
 
@@ -546,9 +623,19 @@ function TeamDashboard({ teamId }: { teamId: string }) {
               onDragOver={handleDragOver}
               onDrop={handleDropOnMembers}
             >
-              <h2 className="text-lg font-bold text-white mb-3">
-                Team Members ({members.length})
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold text-white">
+                  Team Members ({members.length})
+                </h2>
+                <button
+                  onClick={() => setShowAddMember(true)}
+                  className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+                  title="Add new member"
+                >
+                  <span>+</span>
+                  <span>Add</span>
+                </button>
+              </div>
 
               <div className="flex-1 overflow-y-auto space-y-2 border-2 border-dashed border-gray-600 rounded-lg p-2 min-h-[200px]">
                 {members.map((member) => {
@@ -562,6 +649,7 @@ function TeamDashboard({ teamId }: { teamId: string }) {
                       source="members"
                       onDragStart={handleDragStart}
                       isParticipant={isParticipant}
+                      onDelete={confirmDeleteMember}
                     />
                   )
                 })}
@@ -569,7 +657,7 @@ function TeamDashboard({ teamId }: { teamId: string }) {
 
               {members.length === 0 && (
                 <p className="text-center text-gray-500 py-8">
-                  No members yet. Add some in Sanity Studio!
+                  No members yet. Click "Add" to add your first member!
                 </p>
               )}
 
@@ -733,6 +821,83 @@ function TeamDashboard({ teamId }: { teamId: string }) {
             </div>
           </div>
         )}
+
+        {/* Add Member Modal */}
+        {showAddMember && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowAddMember(false)}>
+            <div className="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm border border-gray-700" onClick={e => e.stopPropagation()}>
+              <h2 className="text-xl font-bold text-white mb-4">Add New Member</h2>
+              <form onSubmit={handleAddMember}>
+                <div className="mb-4">
+                  <label htmlFor="memberName" className="block text-sm font-medium text-gray-300 mb-2">
+                    Member Name
+                  </label>
+                  <input
+                    type="text"
+                    id="memberName"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    placeholder="Enter member name"
+                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    autoFocus
+                    disabled={addingMember}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddMember(false)
+                      setNewMemberName('')
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 transition-colors"
+                    disabled={addingMember}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!newMemberName.trim() || addingMember}
+                  >
+                    {addingMember ? 'Adding...' : 'Add Member'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Member Confirmation Modal */}
+        {showDeleteConfirm && memberToDelete && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowDeleteConfirm(false)}>
+            <div className="bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-sm border border-gray-700" onClick={e => e.stopPropagation()}>
+              <h2 className="text-xl font-bold text-white mb-2">Delete Member?</h2>
+              <p className="text-gray-400 mb-4">
+                Are you sure you want to remove <span className="text-white font-medium">{memberToDelete.name}</span> from the team? This will also delete their win history.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    setMemberToDelete(null)
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 transition-colors"
+                  disabled={deletingMember}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteMember}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  disabled={deletingMember}
+                >
+                  {deletingMember ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -840,6 +1005,7 @@ function DraggableMemberCard({
   source,
   onDragStart,
   isParticipant,
+  onDelete,
 }: {
   member: Member
   isWinner: boolean
@@ -847,6 +1013,7 @@ function DraggableMemberCard({
   source: 'members' | 'participants'
   onDragStart: (member: Member, source: 'members' | 'participants') => void
   isParticipant?: boolean
+  onDelete?: (member: Member) => void
 }) {
   const daysSinceWin = member.lastWinDate
     ? Math.ceil((Date.now() - new Date(member.lastWinDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -897,6 +1064,21 @@ function DraggableMemberCard({
       {isEligible && !isWinner && <span className="text-green-400 text-xs">✓</span>}
       {!isWinner && source === 'members' && isParticipant && (
         <span className="text-purple-400 text-xs ml-1">in</span>
+      )}
+      {onDelete && source === 'members' && !isWinner && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            onDelete(member)
+          }}
+          className="ml-2 p-1 text-gray-500 hover:text-red-400 transition-colors"
+          title="Delete member"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       )}
     </div>
   )
