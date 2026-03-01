@@ -1,20 +1,29 @@
-import { createClient } from '@sanity/client'
+import { createClient, SanityClient } from '@sanity/client'
 import { NextResponse } from 'next/server'
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production'
 const token = process.env.SANITY_API_TOKEN
 
-const writeClient = createClient({
-  projectId,
-  dataset,
-  apiVersion: '2025-01-01',
-  useCdn: false,
-  token,
-})
+const writeClient: SanityClient | null = projectId
+  ? createClient({
+      projectId,
+      dataset,
+      apiVersion: '2025-01-01',
+      useCdn: false,
+      token,
+    })
+  : null
 
 export async function POST(request: Request) {
   try {
+    if (!writeClient) {
+      return NextResponse.json(
+        { error: 'Sanity client not configured - missing NEXT_PUBLIC_SANITY_PROJECT_ID' },
+        { status: 500 }
+      )
+    }
+
     if (!token) {
       return NextResponse.json(
         { error: 'SANITY_API_TOKEN not configured' },
