@@ -5,15 +5,17 @@ const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production'
 const token = process.env.SANITY_API_TOKEN
 
-const writeClient: SanityClient | null = projectId
-  ? createClient({
-      projectId,
-      dataset,
-      apiVersion: '2025-01-01',
-      useCdn: false,
-      token,
-    })
-  : null
+// Only create client if projectId is a non-empty string
+let writeClient: SanityClient | null = null
+if (projectId && projectId.trim() !== '') {
+  writeClient = createClient({
+    projectId,
+    dataset,
+    apiVersion: '2025-01-01',
+    useCdn: false,
+    token,
+  })
+}
 
 export async function POST(request: Request) {
   try {
